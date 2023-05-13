@@ -1,0 +1,72 @@
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build-gpu:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Build GPU Image
+        id: build-gpu-image
+        run: |
+          docker build -t gpu-base .
+          image_id=$(docker images -q gpu-base)
+          echo "::set-output name=image_id::$image_id"
+      - name: Save GPU Image
+        run: |
+          docker tag ${{ steps.build-gpu-image.outputs.image_id }} <username>/tritonserver:gpu
+          docker push <username>/tritonserver:gpu
+          echo "::set-output name=gpu-image::<username>/tritonserver:gpu"
+        env:
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+
+  build-cpu:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Build CPU Image
+        id: build-cpu-image
+        run: |
+          docker build -t base .
+          image_id=$(docker images -q base)
+          echo "::set-output name=image_id::$image_id"
+      - name: Save CPU Image
+        run: |
+          docker tag ${{ steps.build-cpu-image.outputs.image_id }} <username>/tritonserver:cpu
+          docker push <username>/tritonserver:cpu
+          echo "::set-output name=cpu-image::<username>/tritonserver:cpu"
+        env:
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+
+  create-release:
+    needs: [build-gpu, build-cpu]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1.0.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          body: |
+            This is an automated release created by the GitHub Actions workflow.
+          draft: false
+          prerelease: false
+      - name: Upload GPU Image
+        uses: actions/upload-artifact@v2
+        with:
+          name: TritonServer GPU Image
+          path: <path to gpu image file>
+          if: steps.build-gpu.outputs.gpu-image != ''
+      - name: Upload CPU Image
+        uses: actions/upload-artifact@v2
+        with:
+          name: TritonServer CPU Image
+          path: <path to cpu image file>
+          if: steps.build-cpu.outputs.cpu-image != ''
