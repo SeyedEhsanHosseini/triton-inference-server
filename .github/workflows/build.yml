@@ -10,7 +10,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Build GPU Image
-        run: python3 build.py --image gpu-base,nvcr.io/nvidia/tritonserver:22.04-py3-min --backend ensemble:main --backend pytorch:main --backend python:main
+        run: python3 build.py --image gpu-base,nvcr.io/nvidia/tritonserver:22.04-py3-min --backend ensemble:main --backend pytorch:main --backend python:main --no-container-interactive
       - name: Save GPU Image
         run: |
           IMAGE_ID=$(docker images | grep -v "cibase" | awk '{print $3}')
@@ -26,7 +26,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Build CPU Image
-        run: python3 build.py --image base,nvcr.io/nvidia/tritonserver:22.04-py3-min --enable-gpu --backend ensemble:main --backend pytorch:main --backend python:main
+        run: python3 build.py --image base,nvcr.io/nvidia/tritonserver:22.04-py3-min --enable-gpu --backend ensemble:main --backend pytorch:main --backend python:main --no-container-interactive
       - name: Save CPU Image
         run: |
           IMAGE_ID=$(docker images | grep -v "cibase" | awk '{print $3}')
