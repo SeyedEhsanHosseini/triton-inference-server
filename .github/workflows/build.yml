@@ -1,3 +1,5 @@
+name: Build Triton Inference Server
+
 on:
   push:
     branches: [ main ]
@@ -8,16 +10,13 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Build GPU Image
-        id: build-gpu-image
-        run: |
-          docker build -t gpu-base .
-          image_id=$(docker images -q gpu-base)
-          echo "::set-output name=image_id::$image_id"
+        run: python3 build.py --image gpu-base,nvcr.io/nvidia/tritonserver:22.04-py3-min --backend ensemble:main --backend pytorch:main --backend python:main
       - name: Save GPU Image
         run: |
-          docker tag ${{ steps.build-gpu-image.outputs.image_id }} <username>/tritonserver:gpu
-          docker push <username>/tritonserver:gpu
-          echo "::set-output name=gpu-image::<username>/tritonserver:gpu"
+          IMAGE_ID=$(docker images | grep -v "cibase" | awk '{print $3}')
+          docker tag $IMAGE_ID seyedehsanhosseini/tritonserver/tritonserver:gpu
+          docker push seyedehsanhosseini/tritonserver/tritonserver:gpu
+          echo "::set-output name=cpu-image::seyedehsanhosseini/tritonserver/tritonserver:gpu"
         env:
           DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
           DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
@@ -27,16 +26,13 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Build CPU Image
-        id: build-cpu-image
-        run: |
-          docker build -t base .
-          image_id=$(docker images -q base)
-          echo "::set-output name=image_id::$image_id"
+        run: python3 build.py --image base,nvcr.io/nvidia/tritonserver:22.04-py3-min --enable-gpu --backend ensemble:main --backend pytorch:main --backend python:main
       - name: Save CPU Image
         run: |
-          docker tag ${{ steps.build-cpu-image.outputs.image_id }} <username>/tritonserver:cpu
-          docker push <username>/tritonserver:cpu
-          echo "::set-output name=cpu-image::<username>/tritonserver:cpu"
+          IMAGE_ID=$(docker images | grep -v "cibase" | awk '{print $3}')
+          docker tag $IMAGE_ID seyedehsanhosseini/tritonserver/tritonserver:cpu
+          docker push seyedehsanhosseini/tritonserver/tritonserver:cpu
+          echo "::set-output name=cpu-image::seyedehsanhosseini/tritonserver/tritonserver:cpu"
         env:
           DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
           DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
